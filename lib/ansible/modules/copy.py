@@ -5,9 +5,6 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
-
-# Import helper functions. We use to_bytes and to_native from the common converters,
-# and attempt to import to_text. (to_text may be found in ansible.module_utils._text in some versions.)
 from ansible.module_utils.common.text.converters import to_bytes, to_native
 try:
     from ansible.module_utils._text import to_text
@@ -33,107 +30,98 @@ description:
 options:
   src:
     description:
-      - Local path to a file to copy to the remote server.
-      - This can be absolute or relative.
-      - If path is a directory, it is copied recursively. In this case, if path ends
-        with C(/), only inside contents of that directory are copied to destination.
-        Otherwise, if it does not end with C(/), the directory itself with all contents
-        is copied. This behavior is similar to the C(rsync) command line tool.
+    - Local path to a file to copy to the remote server.
+    - This can be absolute or relative.
+    - If path is a directory, it is copied recursively. In this case, if path ends
+      with C(/), only inside contents of that directory are copied to destination.
+      Otherwise, if it does not end with C(/), the directory itself with all contents
+      is copied. This behavior is similar to the C(rsync) command line tool.
     type: path
   content:
     description:
-      - When used instead of O(src), sets the contents of a file directly to the specified value.
-      - Works only when O(dest) is a file. Creates the file if it does not exist.
-      - For advanced formatting or if O(content) contains a variable, use the
-        M(ansible.builtin.template) module.
+    - When used instead of O(src), sets the contents of a file directly to the specified value.
+    - Works only when O(dest) is a file. Creates the file if it does not exist.
+    - For advanced formatting or if O(content) contains a variable, use the
+      M(ansible.builtin.template) module.
     type: str
     version_added: '1.1'
   dest:
     description:
-      - Remote absolute path where the file should be copied to.
-      - If O(src) is a directory, this must be a directory too.
-      - If O(dest) is a non-existent path and if either O(dest) ends with C(/) or O(src) is a directory, O(dest) is created.
-      - If O(dest) is a relative path, the starting directory is determined by the remote host.
-      - If O(src) and O(dest) are files, the parent directory of O(dest) is not created and the task fails if it does not already exist.
+    - Remote absolute path where the file should be copied to.
+    - If O(src) is a directory, this must be a directory too.
+    - If O(dest) is a non-existent path and if either O(dest) ends with C(/) or O(src) is a directory, O(dest) is created.
+    - If O(dest) is a relative path, the starting directory is determined by the remote host.
+    - If O(src) and O(dest) are files, the parent directory of O(dest) is not created and the task fails if it does not already exist.
     type: path
     required: yes
   backup:
     description:
-      - Create a backup file including the timestamp information so you can get the original file back if you somehow clobbered it incorrectly.
+    - Create a backup file including the timestamp information so you can get the original file back if you somehow clobbered it incorrectly.
     type: bool
     default: no
     version_added: '0.7'
   force:
     description:
-      - Influence whether the remote file must always be replaced.
-      - If V(true), the remote file will be replaced when contents are different than the source.
-      - If V(false), the file will only be transferred if the destination does not exist.
+    - Influence whether the remote file must always be replaced.
+    - If V(true), the remote file will be replaced when contents are different than the source.
+    - If V(false), the file will only be transferred if the destination does not exist.
     type: bool
     default: yes
     version_added: '1.1'
   mode:
     description:
-      - The permissions of the destination file or directory.
-      - For those used to C(/usr/bin/chmod) remember that modes are actually octal numbers.
-        You must either add a leading zero so that Ansible's YAML parser knows it is an octal number
-        (like V(0644) or V(01777)) or quote it (like V('644') or V('1777')) so Ansible receives a string
-        and can do its own conversion from string into number. Giving Ansible a number without following
-        one of these rules will end up with a decimal number which will have unexpected results.
-      - As of Ansible 1.8, the mode may be specified as a symbolic mode (for example, V(u+rwx) or V(u=rw,g=r,o=r)).
-      - As of Ansible 2.3, the mode may also be the special string V(preserve).
-      - V(preserve) means that the file will be given the same permissions as the source file.
-      - When doing a recursive copy, see also O(directory_mode).
-      - If O(mode) is not specified and the destination file B(does not) exist, the default C(umask) on the system will be used
-        when setting the mode for the newly created file.
-      - If O(mode) is not specified and the destination file B(does) exist, the mode of the existing file will be used.
-      - Specifying O(mode) is the best way to ensure files are created with the correct permissions.
-        See CVE-2020-1736 for further details.
+    - The permissions of the destination file or directory.
+    - For those used to C(/usr/bin/chmod) remember that modes are actually octal numbers.
+      You must either add a leading zero so that Ansible's YAML parser knows it is an octal number
+      (like V(0644) or V(01777)) or quote it (like V('644') or V('1777')) so Ansible receives a string
+      and can do its own conversion from string into number. Giving Ansible a number without following
+      one of these rules will end up with a decimal number which will have unexpected results.
+    - As of Ansible 1.8, the mode may be specified as a symbolic mode (for example, V(u+rwx) or V(u=rw,g=r,o=r)).
+    - As of Ansible 2.3, the mode may also be the special string V(preserve).
+    - V(preserve) means that the file will be given the same permissions as the source file.
+    - When doing a recursive copy, see also O(directory_mode).
+    - If O(mode) is not specified and the destination file B(does not) exist, the default C(umask) on the system will be used
+      when setting the mode for the newly created file.
+    - If O(mode) is not specified and the destination file B(does) exist, the mode of the existing file will be used.
+    - Specifying O(mode) is the best way to ensure files are created with the correct permissions.
+      See CVE-2020-1736 for further details.
   directory_mode:
     description:
-      - Set the access permissions of newly created directories to the given mode.
-        Permissions on existing directories do not change.
-      - See O(mode) for the syntax of accepted values.
-      - The target system's defaults determine permissions when this parameter is not set.
+    - Set the access permissions of newly created directories to the given mode.
+      Permissions on existing directories do not change.
+    - See O(mode) for the syntax of accepted values.
+    - The target system's defaults determine permissions when this parameter is not set.
     type: raw
     version_added: '1.5'
   remote_src:
     description:
-      - Influence whether O(src) needs to be transferred or already is present remotely.
-      - If V(false), it will search for O(src) on the controller node.
-      - If V(true), it will search for O(src) on the managed (remote) node.
-      - O(remote_src) supports recursive copying as of version 2.8.
-      - O(remote_src) only works with O(mode=preserve) as of version 2.6.
-      - Auto-decryption of files does not work when O(remote_src=yes).
+    - Influence whether O(src) needs to be transferred or already is present remotely.
+    - If V(false), it will search for O(src) on the controller node.
+    - If V(true), it will search for O(src) on the managed (remote) node.
+    - O(remote_src) supports recursive copying as of version 2.8.
+    - O(remote_src) only works with O(mode=preserve) as of version 2.6.
+    - Auto-decryption of files does not work when O(remote_src=yes).
     type: bool
     default: no
     version_added: '2.0'
   follow:
     description:
-      - This flag indicates that filesystem links in the destination, if they exist, should be followed.
+    - This flag indicates that filesystem links in the destination, if they exist, should be followed.
     type: bool
     default: no
     version_added: '1.8'
   local_follow:
     description:
-      - This flag indicates that filesystem links in the source tree, if they exist, should be followed.
+    - This flag indicates that filesystem links in the source tree, if they exist, should be followed.
     type: bool
     version_added: '2.4'
   checksum:
     description:
-      - SHA1 checksum of the file being transferred.
-      - Used to validate that the copy of the file was successful.
-      - If this is not provided, ansible will use the local calculated checksum of the src file.
+    - SHA1 checksum of the file being transferred.
+    - Used to validate that the copy of the file was successful.
+    - If this is not provided, ansible will use the local calculated checksum of the src file.
     type: str
     version_added: '2.5'
-  encoding:
-    description:
-      - Optional encoding to use when reading the source file and writing the destination file.
-      - When specified, the module will re-read the source file (assumed to be UTF-8 encoded),
-        convert it to Unicode, and then re-encode it to the target encoding using Python’s built‑in support.
-      - This makes the module compatible with all encodings.
-      - Note: This conversion is only supported when copying a file (not directories) and when remote_src is false.
-    type: str
-    version_added: 'custom'
 extends_documentation_fragment:
     - decrypt
     - files
@@ -181,12 +169,65 @@ EXAMPLES = r"""
     owner: foo
     group: foo
     mode: '0644'
-
 - name: Copy file with encoding conversion (custom)
   ansible.builtin.copy:
     src: /path/to/local/foo.txt
     dest: /etc/foo.txt
     encoding: cp037
+- name: Copy file with owner and permission, using symbolic representation
+  ansible.builtin.copy:
+    src: /srv/myfiles/foo.conf
+    dest: /etc/foo.conf
+    owner: foo
+    group: foo
+    mode: u=rw,g=r,o=r
+
+- name: Another symbolic mode example, adding some permissions and removing others
+  ansible.builtin.copy:
+    src: /srv/myfiles/foo.conf
+    dest: /etc/foo.conf
+    owner: foo
+    group: foo
+    mode: u+rw,g-wx,o-rwx
+
+- name: Copy a new "ntp.conf" file into place, backing up the original if it differs from the copied version
+  ansible.builtin.copy:
+    src: /mine/ntp.conf
+    dest: /etc/ntp.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+
+- name: Copy a new "sudoers" file into place, after passing validation with visudo
+  ansible.builtin.copy:
+    src: /mine/sudoers
+    dest: /etc/sudoers
+    validate: /usr/sbin/visudo -csf %s
+
+- name: Copy a "sudoers" file on the remote machine for editing
+  ansible.builtin.copy:
+    src: /etc/sudoers
+    dest: /etc/sudoers.edit
+    remote_src: yes
+    validate: /usr/sbin/visudo -csf %s
+
+- name: Copy using inline content
+  ansible.builtin.copy:
+    content: '# This file was moved to /etc/other.conf'
+    dest: /etc/mine.conf
+
+- name: If follow=yes, /path/to/file will be overwritten by contents of foo.conf
+  ansible.builtin.copy:
+    src: /etc/foo.conf
+    dest: /path/to/link  # link to /path/to/file
+    follow: yes
+
+- name: If follow=no, /path/to/link will become a file and be overwritten by contents of foo.conf
+  ansible.builtin.copy:
+    src: /etc/foo.conf
+    dest: /path/to/link  # link to /path/to/file
+    follow: no
 """
 
 RETURN = r"""
@@ -261,12 +302,14 @@ import stat
 import tempfile
 import traceback
 
+from ansible.module_utils.common.text.converters import to_bytes, to_native
 from ansible.module_utils.basic import AnsibleModule
 
-# Custom exception for module errors
+
 class AnsibleModuleError(Exception):
     def __init__(self, results):
         self.results = results
+
 
 def split_pre_existing_dir(dirname):
     """
@@ -285,10 +328,12 @@ def split_pre_existing_dir(dirname):
     new_directory_list.append(tail)
     return (pre_existing_dir, new_directory_list)
 
+
 def adjust_recursive_directory_permissions(pre_existing_dir, new_directory_list, module, directory_args, changed):
     """
-    Walk the new directories list and make sure that permissions are as we would expect.
+    Walk the new directories list and make sure that permissions are as we would expect
     """
+
     if new_directory_list:
         working_dir = os.path.join(pre_existing_dir, new_directory_list.pop(0))
         directory_args['path'] = working_dir
@@ -296,25 +341,32 @@ def adjust_recursive_directory_permissions(pre_existing_dir, new_directory_list,
         changed = adjust_recursive_directory_permissions(working_dir, new_directory_list, module, directory_args, changed)
     return changed
 
+
 def chown_path(module, path, owner, group):
     """Update the owner/group if specified and different from the current owner/group."""
     changed = module.set_owner_if_different(path, owner, False)
     return module.set_group_if_different(path, group, changed)
 
+
 def chown_recursive(path, module):
     changed = False
     owner = module.params['owner']
     group = module.params['group']
+
+    # TODO: Consolidate with the other methods calling set_*_if_different method, this is inefficient.
     for dirpath, dirnames, filenames in os.walk(path):
         changed |= chown_path(module, dirpath, owner, group)
         for subdir in [os.path.join(dirpath, d) for d in dirnames]:
             changed |= chown_path(module, subdir, owner, group)
         for filepath in [os.path.join(dirpath, f) for f in filenames]:
             changed |= chown_path(module, filepath, owner, group)
+
     return changed
+
 
 def copy_diff_files(src, dest, module):
     """Copy files that are different between `src` directory and `dest` directory."""
+
     changed = False
     owner = module.params['owner']
     group = module.params['group']
@@ -334,12 +386,15 @@ def copy_diff_files(src, dest, module):
             else:
                 shutil.copyfile(b_src_item_path, b_dest_item_path)
                 shutil.copymode(b_src_item_path, b_dest_item_path)
+
             chown_path(module, b_dest_item_path, owner, group)
             changed = True
     return changed
 
+
 def copy_left_only(src, dest, module):
     """Copy files that exist in `src` directory only to the `dest` directory."""
+
     changed = False
     owner = module.params['owner']
     group = module.params['group']
@@ -353,27 +408,35 @@ def copy_left_only(src, dest, module):
             dest_item_path = os.path.join(dest, item)
             b_src_item_path = to_bytes(src_item_path, errors='surrogate_or_strict')
             b_dest_item_path = to_bytes(dest_item_path, errors='surrogate_or_strict')
+
             if os.path.islink(b_src_item_path) and os.path.isdir(b_src_item_path) and local_follow is True:
                 shutil.copytree(b_src_item_path, b_dest_item_path, symlinks=not local_follow)
                 chown_recursive(b_dest_item_path, module)
+
             if os.path.islink(b_src_item_path) and os.path.isdir(b_src_item_path) and local_follow is False:
                 linkto = os.readlink(b_src_item_path)
                 os.symlink(linkto, b_dest_item_path)
+
             if os.path.islink(b_src_item_path) and os.path.isfile(b_src_item_path) and local_follow is True:
                 shutil.copyfile(b_src_item_path, b_dest_item_path)
                 chown_path(module, b_dest_item_path, owner, group)
+
             if os.path.islink(b_src_item_path) and os.path.isfile(b_src_item_path) and local_follow is False:
                 linkto = os.readlink(b_src_item_path)
                 os.symlink(linkto, b_dest_item_path)
+
             if not os.path.islink(b_src_item_path) and os.path.isfile(b_src_item_path):
                 shutil.copyfile(b_src_item_path, b_dest_item_path)
                 shutil.copymode(b_src_item_path, b_dest_item_path)
                 chown_path(module, b_dest_item_path, owner, group)
+
             if not os.path.islink(b_src_item_path) and os.path.isdir(b_src_item_path):
                 shutil.copytree(b_src_item_path, b_dest_item_path, symlinks=not local_follow)
                 chown_recursive(b_dest_item_path, module)
+
             changed = True
     return changed
+
 
 def copy_common_dirs(src, dest, module):
     changed = False
@@ -387,9 +450,11 @@ def copy_common_dirs(src, dest, module):
         left_only_changed = copy_left_only(b_src_item_path, b_dest_item_path, module)
         if diff_files_changed or left_only_changed:
             changed = True
-        # Recurse into subdirectory.
+
+        # recurse into subdirectory
         changed = copy_common_dirs(os.path.join(src, item), os.path.join(dest, item), module) or changed
     return changed
+
 
 def copy_directory(src, dest, module):
     if not os.path.exists(dest):
@@ -404,6 +469,7 @@ def copy_directory(src, dest, module):
         owner_group_changed = chown_recursive(dest, module)
         changed = any([diff_files_changed, left_only_changed, common_dirs_changed, owner_group_changed])
     return changed
+
 
 def main():
 
@@ -431,7 +497,7 @@ def main():
     src = module.params['src']
     b_src = to_bytes(src, errors='surrogate_or_strict')
     dest = module.params['dest']
-    # Ensure we always have a directory component for later processing.
+    # Make sure we always have a directory component for later processing
     if os.path.sep not in dest:
         dest = '.{0}{1}'.format(os.path.sep, dest)
     b_dest = to_bytes(dest, errors='surrogate_or_strict')
@@ -452,12 +518,14 @@ def main():
     if not os.access(b_src, os.R_OK):
         module.fail_json(msg="Source %s not readable" % (src))
 
-    # Preserve is usually handled in the action plugin but mode + remote_src must be done on the remote host.
+    # Preserve is usually handled in the action plugin but mode + remote_src has to be done on the
+    # remote host
     if module.params['mode'] == 'preserve':
         module.params['mode'] = '0%03o' % stat.S_IMODE(os.stat(b_src).st_mode)
     mode = module.params['mode']
 
     changed = False
+
     checksum_dest = None
     checksum_src = None
     md5sum_src = None
@@ -468,6 +536,7 @@ def main():
         except (OSError, IOError) as e:
             module.warn("Unable to calculate src checksum, assuming change: %s" % to_native(e))
         try:
+            # Backwards compat only.  This will be None in FIPS mode
             md5sum_src = module.md5(src)
         except ValueError:
             pass
@@ -481,7 +550,7 @@ def main():
             expected_checksum=checksum
         )
 
-    # Special handling for recursive copy - create intermediate dirs.
+    # Special handling for recursive copy - create intermediate dirs
     if dest.endswith(os.sep):
         if _original_basename:
             dest = os.path.join(dest, _original_basename)
@@ -492,15 +561,19 @@ def main():
             try:
                 (pre_existing_dir, new_directory_list) = split_pre_existing_dir(dirname)
             except AnsibleModuleError as e:
-                e.results['msg'] += ' Could not copy to {0}'.format(dest)
+                e.result['msg'] += ' Could not copy to {0}'.format(dest)
                 module.fail_json(**e.results)
+
             if module.check_mode:
                 module.exit_json(msg='dest directory %s would be created' % dirname, changed=True, src=src)
             os.makedirs(b_dirname)
             changed = True
             directory_args = module.load_file_common_arguments(module.params)
             directory_mode = module.params["directory_mode"]
-            directory_args['mode'] = directory_mode if directory_mode is not None else None
+            if directory_mode is not None:
+                directory_args['mode'] = directory_mode
+            else:
+                directory_args['mode'] = None
             adjust_recursive_directory_permissions(pre_existing_dir, new_directory_list, module, directory_args, changed)
 
     if os.path.isdir(b_dest):
@@ -521,6 +594,10 @@ def main():
     else:
         if not os.path.exists(os.path.dirname(b_dest)):
             try:
+                # os.path.exists() can return false in some
+                # circumstances where the directory does not have
+                # the execute bit for the current user set, in
+                # which case the stat() call will raise an OSError
                 os.stat(os.path.dirname(b_dest))
             except OSError as e:
                 if "permission denied" in to_native(e).lower():
@@ -591,15 +668,19 @@ def main():
                 module.fail_json(msg="failed to copy: %s to %s" % (src, dest), traceback=traceback.format_exc())
         changed = True
 
+
+    # If neither have checksums, both src and dest are directories.
     checksums_none = checksum_src is None and checksum_dest is None
     both_directories = os.path.isdir(module.params['src']) and (os.path.isdir(module.params['dest']) or not os.path.exists(module.params['dest']))
     if checksums_none and remote_src and both_directories:
         b_src = to_bytes(module.params['src'], errors='surrogate_or_strict')
         b_dest = to_bytes(module.params['dest'], errors='surrogate_or_strict')
+
         if not b_src.endswith(to_bytes(os.path.sep)):
             b_basename = os.path.basename(b_src)
             b_dest = os.path.join(b_dest, b_basename)
             b_src = os.path.join(b_src, b'')
+
         changed |= copy_directory(b_src, b_dest, module)
 
     res_args = dict(
@@ -612,6 +693,7 @@ def main():
     res_args['changed'] = module.set_fs_attributes_if_different(file_args, res_args['changed'])
 
     module.exit_json(**res_args)
+
 
 if __name__ == '__main__':
     main()
