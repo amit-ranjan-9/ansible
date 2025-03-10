@@ -159,6 +159,14 @@ attributes:
   vault:
     support: full
     version_added: '2.2'
+encoding:
+  description:
+    - Optional encoding to use when reading the source file and writing the destination file.
+    - When specified, the module will re-read the source file (assumed to be UTF-8 encoded), convert it to Unicode, and then re-encode it to the target encoding using Python’s built-in support.
+    - This conversion is only supported when copying a file (not directories).
+  type: str
+  version_added: 'custom'
+  
 """
 
 EXAMPLES = r"""
@@ -169,11 +177,6 @@ EXAMPLES = r"""
     owner: foo
     group: foo
     mode: '0644'
-- name: Copy file with encoding conversion (custom)
-  ansible.builtin.copy:
-    src: /path/to/local/foo.txt
-    dest: /etc/foo.txt
-    encoding: cp037
 - name: Copy file with owner and permission, using symbolic representation
   ansible.builtin.copy:
     src: /srv/myfiles/foo.conf
@@ -615,7 +618,7 @@ def main():
                 if backup:
                     if os.path.exists(b_dest):
                         backup_file = module.backup_local(dest)
-                # Allow for conversion from symlink.
+                # allow for conversion from symlink.
                 if os.path.islink(b_dest):
                     os.unlink(b_dest)
                     open(b_dest, 'w').close()
