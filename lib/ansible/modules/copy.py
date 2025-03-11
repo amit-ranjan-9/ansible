@@ -643,11 +643,13 @@ def main():
                         # Convert raw bytes to Unicode text (assuming source is UTF-8)
                         text = to_text(raw, errors='surrogate_or_strict')
                         # Convert the Unicode text to bytes in the target encoding
-                        converted = to_bytes(text, errors='surrogate_or_strict', encoding=encoding)
+                        #converted = to_bytes(text, errors='surrogate_or_strict', encoding=encoding)
                         fd, tmp_file = tempfile.mkstemp(dir=os.path.dirname(b_dest))
                         try:
-                            with os.fdopen(fd, 'wb') as tmpf:
-                                tmpf.write(converted)
+                            # with os.fdopen(fd, 'wb') as tmpf:
+                            #     tmpf.write(converted)
+                            with os.fdopen(fd, 'w', encoding=encoding) as tmpf:
+                                tmpf.write(text)
                         except Exception as e:
                             os.unlink(tmp_file)
                             raise e
