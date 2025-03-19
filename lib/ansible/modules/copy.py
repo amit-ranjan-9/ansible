@@ -648,7 +648,7 @@ def main():
                         try:
                             # with os.fdopen(fd, 'wb') as tmpf:
                             #     tmpf.write(converted)
-                            with os.fdopen(fd, 'w', encoding=encoding) as tmpf:
+                            with os.fdopen(fd, 'w', encoding=encoding, errors='replace') as tmpf:
                                 tmpf.write(text)
                         except Exception as e:
                             os.unlink(tmp_file)
