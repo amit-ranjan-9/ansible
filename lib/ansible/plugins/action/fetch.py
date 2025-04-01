@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import base64
+import tempfile
 from ansible.errors import AnsibleConnectionFailure, AnsibleError, AnsibleActionFail, AnsibleActionSkip
 from ansible.module_utils.common.text.converters import to_bytes, to_text
 from ansible.module_utils.six import string_types
@@ -169,8 +170,49 @@ class ActionModule(ActionBase):
             # calculate checksum for the local file
             local_checksum = checksum(dest)
 
-            if remote_checksum != local_checksum:
-                # create the containing directories, if needed
+            # force conversion if encoding is specified; ignore local checksum
+            encoding = self._task.args.get('encoding')
+            if encoding:
+                makedirs_safe(os.path.dirname(dest))
+                # force retrieval of raw data via slurp if not already set
+                if remote_data is None:
+                    slurpres = self._execute_module(module_name='ansible.legacy.slurp',
+                                                    module_args=dict(src=source),
+                                                    task_vars=task_vars)
+                    if slurpres.get('failed'):
+                        raise AnsibleActionFail("Failed to slurp remote file for encoding conversion")
+                    if slurpres.get('encoding') == 'base64':
+                        remote_data = base64.b64decode(slurpres.get('content', ''))
+                # use source_encoding parameter if provided; default to 'utf-8'
+                source_enc = self._task.args.get('source_encoding', 'utf-8')
+                target_enc = encoding
+                try:
+                    # decode remote_data using source_enc (e.g., "ibm1047" or "cp037")
+                    text = to_text(remote_data, errors='replace', encoding=source_enc)
+                    display.v("Intermediate decoded text: %s" % text)
+                    fd, tmp_file = tempfile.mkstemp(dir=os.path.dirname(dest))
+                    with os.fdopen(fd, 'w', encoding=target_enc, errors='replace') as f:
+                        f.write(text)
+                    try:
+                        self._connection.atomic_move(tmp_file, dest,
+                                                     unsafe_writes=self._task.args.get('unsafe_writes', False),
+                                                     keep_dest_attrs=False)
+                    except AttributeError:
+                        os.rename(tmp_file, dest)
+                except (IOError, OSError) as e:
+                    raise AnsibleActionFail("Failed to fetch the file with encoding conversion: %s" % e)
+                # Skip checksum comparison if conversion is applied
+                new_checksum = secure_hash(dest)
+                try:
+                    new_md5 = md5(dest)
+                except ValueError:
+                    new_md5 = None
+                result.update({'changed': True, 'md5sum': new_md5, 'dest': dest,
+                               'remote_md5sum': None, 'checksum': new_checksum,
+                               'remote_checksum': remote_checksum})
+            else:
+                # no encoding conversion: use binary fetch
+              if remote_checksum != local_checksum:
                 makedirs_safe(os.path.dirname(dest))
 
                 # fetch the file and check for changes
@@ -197,7 +239,7 @@ class ActionModule(ActionBase):
                     result.update({'changed': True, 'md5sum': new_md5, 'dest': dest,
                                    'remote_md5sum': None, 'checksum': new_checksum,
                                    'remote_checksum': remote_checksum})
-            else:
+              else:
                 # For backwards compatibility. We'll return None on FIPS enabled systems
                 try:
                     local_md5 = md5(dest)
