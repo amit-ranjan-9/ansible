@@ -55,6 +55,7 @@ from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollecto
 from ansible.module_utils.facts.system.ssh_pub_keys import SshPubKeyFactCollector
 from ansible.module_utils.facts.system.systemd import SystemdFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
+from ansible.module_utils.facts.system.zos import ZOSFactCollector #added zosfactcollector
 
 from ansible.module_utils.facts.hardware.base import HardwareCollector
 from ansible.module_utils.facts.hardware.aix import AIXHardwareCollector
@@ -120,7 +121,8 @@ _general = [
     LoadAvgFactCollector,
     SshPubKeyFactCollector,
     UserFactCollector,
-    SystemdFactCollector
+    SystemdFactCollector,
+    ZOSFactCollector #added zosfactcollector
 ]  # type: t.List[t.Type[BaseFactCollector]]
 
 # virtual, this might also limit hardware/networking

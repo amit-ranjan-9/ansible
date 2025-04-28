@@ -48,6 +48,10 @@ class PlatformFactCollector(BaseFactCollector):
         platform_facts['kernel_version'] = platform.version()
         platform_facts['machine'] = platform.machine()
 
+        # Check for z/OS specifically
+        if platform_facts['system'] == "OS/390":
+            platform_facts['system'] = "z/OS"
+
         platform_facts['python_version'] = platform.python_version()
 
         platform_facts['fqdn'] = socket.getfqdn()
