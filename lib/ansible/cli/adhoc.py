@@ -19,9 +19,21 @@ from ansible.module_utils.common.text.converters import to_text
 from ansible.parsing.splitter import parse_kv
 from ansible.playbook import Playbook
 from ansible.playbook.play import Play
-from ansible._internal._datatag._tags import Origin
 from ansible.utils.display import Display
-from ansible._internal._json._profiles import _legacy
+try:
+    from ansible._internal._datatag._tags import Origin
+    from ansible._internal._json._profiles import _legacy
+    has_internal_modules = True
+except ImportError:
+    has_internal_modules = False
+    # Fallback for older Ansible versions
+    _legacy = None
+    class Origin:
+        @staticmethod
+        def tag(data):
+            return data
+        def __init__(self, description):
+            self.description = description
 
 display = Display()
 
@@ -62,6 +74,11 @@ class AdHocCLI(CLI):
         self.parser.add_argument('-m', '--module-name', dest='module_name',
                                  help="Name of the action to execute (default=%s)" % C.DEFAULT_MODULE_NAME,
                                  default=C.DEFAULT_MODULE_NAME)
+        # Add environment variables option
+        self.parser.add_argument('-E', '--environment', dest='environment',
+                                 help="Set environment variables (format 'KEY=VALUE') for module execution. "
+                                      "Can be specified multiple times.",
+                                 action='append', default=[])
         self.parser.add_argument('args', metavar='pattern', help='host pattern')
 
     def post_process_args(self, options):
@@ -81,7 +98,10 @@ class AdHocCLI(CLI):
         module_args = None
         if module_args_raw and module_args_raw.startswith('{') and module_args_raw.endswith('}'):
             try:
-                module_args = json.loads(module_args_raw, cls=_legacy.Decoder)
+                if has_internal_modules and _legacy:
+                    module_args = json.loads(module_args_raw, cls=_legacy.Decoder)
+                else:
+                    module_args = json.loads(module_args_raw)
             except AnsibleParserError:
                 pass
 
@@ -91,7 +111,21 @@ class AdHocCLI(CLI):
         mytask = {'action': {'module': context.CLIARGS['module_name'], 'args': module_args},
                   'timeout': context.CLIARGS['task_timeout']}
 
-        mytask = Origin(description=f'<adhoc {context.CLIARGS["module_name"]!r} task>').tag(mytask)
+        # Process environment variables if provided
+        if context.CLIARGS['environment']:
+            env_dict = {}
+            for env_var in context.CLIARGS['environment']:
+                if '=' in env_var:
+                    key, value = env_var.split('=', 1)
+                    env_dict[key] = value
+                else:
+                    display.warning(f"Skipping invalid environment variable format: {env_var}")
+            
+            if env_dict:
+                mytask['environment'] = env_dict
+
+        if has_internal_modules:
+            mytask = Origin(description=f'<adhoc {context.CLIARGS["module_name"]!r} task>').tag(mytask)
 
         # avoid adding to tasks that don't support it, unless set, then give user an error
         if context.CLIARGS['module_name'] not in C._ACTION_ALL_INCLUDE_ROLE_TASKS and any(frozenset((async_val, poll))):
