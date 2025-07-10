@@ -109,7 +109,7 @@ class AdHocCLI(CLI):
                     env_dict[key] = value
                 else:
                     display.warning("Skipping invalid environment variable format: %s" % env_var)
-            
+
             if env_dict:
                 mytask['environment'] = env_dict
 
