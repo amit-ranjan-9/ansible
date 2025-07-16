@@ -19,6 +19,8 @@ from ansible.parsing.utils.yaml import from_yaml
 from ansible.playbook import Playbook
 from ansible.playbook.play import Play
 from ansible.utils.display import Display
+import json
+import yaml
 
 display = Display()
 
@@ -96,21 +98,56 @@ class AdHocCLI(CLI):
                     env_file = env_item[1:]  # Remove @ prefix
                     try:
                         with open(env_file, 'r') as f:
-                            for line in f:
-                                line = line.strip()
-                                if line and not line.startswith('#') and '=' in line:
-                                    key, value = line.split('=', 1)
-                                    env_dict[key.strip()] = value.strip()
-                    except IOError as e:
+                            content = f.read().strip()
+                            if content.startswith(('{', '[')):
+                                # JSON format
+                                data = json.loads(content)
+                                if isinstance(data, dict):
+                                    env_dict.update(data)
+                                else:
+                                    display.warning("Environment file %s: JSON must be an object, not %s" % (env_file, type(data).__name__))
+                            elif content.startswith(('---', '-')):
+                                # YAML format
+                                data = yaml.safe_load(content)
+                                if isinstance(data, dict):
+                                    env_dict.update(data)
+                                else:
+                                    display.warning("Environment file %s: YAML must be an object, not %s" % (env_file, type(data).__name__))
+                            else:
+                                # Simple KEY=VALUE format
+                                for line in content.split('\n'):
+                                    line = line.strip()
+                                    if line and not line.startswith('#') and '=' in line:
+                                        key, value = line.split('=', 1)
+                                        env_dict[key.strip()] = value.strip()
+                    except (IOError, json.JSONDecodeError, yaml.YAMLError) as e:
                         display.error("Could not read environment file %s: %s" % (env_file, str(e)))
                         continue
                 else:
-                    # Direct key=value format
-                    if '=' in env_item:
-                        key, value = env_item.split('=', 1)
-                        env_dict[key] = value
-                    else:
-                        display.warning("Skipping invalid environment variable format: %s" % env_item)
+                    # Direct format - could be key=value, JSON, or YAML
+                    try:
+                        if env_item.startswith(('{', '[')):
+                            # JSON format
+                            data = json.loads(env_item)
+                            if isinstance(data, dict):
+                                env_dict.update(data)
+                            else:
+                                display.warning("Environment JSON must be an object, not %s" % type(data).__name__)
+                        elif env_item.startswith(('---', '-')) or (':' in env_item and not '=' in env_item):
+                            # YAML format
+                            data = yaml.safe_load(env_item)
+                            if isinstance(data, dict):
+                                env_dict.update(data)
+                            else:
+                                display.warning("Environment YAML must be an object, not %s" % type(data).__name__)
+                        elif '=' in env_item:
+                            # key=value format
+                            key, value = env_item.split('=', 1)
+                            env_dict[key] = value
+                        else:
+                            display.warning("Skipping invalid environment variable format: %s" % env_item)
+                    except (json.JSONDecodeError, yaml.YAMLError) as e:
+                        display.warning("Skipping invalid environment variable format: %s (error: %s)" % (env_item, str(e)))
 
             if env_dict:
                 mytask['environment'] = env_dict
@@ -156,7 +193,7 @@ class AdHocCLI(CLI):
 
         # just listing hosts?
         if context.CLIARGS['listhosts']:
-            display.display(' hosts (%d):' % len(hosts))
+            display.display('hosts (%d):' % len(hosts))
             for host in hosts:
                 display.display('%s' % host)
             return 0
@@ -165,7 +202,7 @@ class AdHocCLI(CLI):
         if context.CLIARGS['module_name'] in C.MODULE_REQUIRE_ARGS and not context.CLIARGS['module_args']:
             err = "No argument passed to %s module" % context.CLIARGS['module_name']
             if pattern.endswith(".yml"):
-                err = err + ' (did you mean to run ansible-playbook?)'
+                err = err + '(did you mean to run ansible-playbook?)'
             raise AnsibleOptionsError(err)
 
         # Avoid modules that don't work with ad-hoc
