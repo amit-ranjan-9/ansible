@@ -524,6 +524,11 @@ def add_vault_options(parser):
     base_group.add_argument('--vault-password-file', '--vault-pass-file', default=[], dest='vault_password_files',
                             help="vault password file", type=unfrack_path(follow=False), action='append')
 
+def add_environment_options(parser):
+    """Add environment variable options to ArgumentParser"""
+    parser.add_argument('-E', '--environment', dest='environment',
+                        help="set environment variables as key=value or JSON/YAML, if filename prepend with @",
+                        action='append', type=maybe_unfrack_path('@'), default=[])
 
 def _tagged_type_factory(name: str, func: t.Callable[[str], object], /) -> t.Callable[[str], object]:
     """

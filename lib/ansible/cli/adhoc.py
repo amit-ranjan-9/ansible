@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-import json
-
 # ansible.cli needs to be imported first, to ensure the source bin/* scripts run that code first
 from ansible.cli import CLI
 from ansible import constants as C
@@ -17,11 +15,10 @@ from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.module_utils.common.text.converters import to_text
 from ansible.parsing.splitter import parse_kv
+from ansible.parsing.utils.yaml import from_yaml
 from ansible.playbook import Playbook
 from ansible.playbook.play import Play
-from ansible._internal._datatag._tags import Origin
 from ansible.utils.display import Display
-from ansible._internal._json._profiles import _legacy
 
 display = Display()
 
@@ -32,8 +29,6 @@ class AdHocCLI(CLI):
     """
 
     name = 'ansible'
-
-    USES_CONNECTION = True
 
     def init_parser(self):
         """ create an options parser for bin/ansible """
@@ -53,6 +48,7 @@ class AdHocCLI(CLI):
         opt_help.add_module_options(self.parser)
         opt_help.add_basedir_options(self.parser)
         opt_help.add_tasknoplay_options(self.parser)
+        opt_help.add_environment_options(self.parser)
 
         # options unique to ansible ad-hoc
         self.parser.add_argument('-a', '--args', dest='module_args',
@@ -85,7 +81,7 @@ class AdHocCLI(CLI):
         module_args = None
         if module_args_raw and module_args_raw.startswith('{') and module_args_raw.endswith('}'):
             try:
-                module_args = json.loads(module_args_raw, cls=_legacy.Decoder)
+                module_args = from_yaml(module_args_raw.strip(), json_only=True)
             except AnsibleParserError:
                 pass
 
@@ -98,7 +94,33 @@ class AdHocCLI(CLI):
             timeout=context.CLIARGS['task_timeout'],
         )
 
-        mytask = Origin(description=f'<adhoc {context.CLIARGS["module_name"]!r} task>').tag(mytask)
+        # process environment variables if provided
+        if context.CLIARGS['environment']:
+            env_dict = {}
+            for env_item in context.CLIARGS['environment']:
+                if env_item.startswith('@'):
+                    # Read from file
+                    env_file = env_item[1:]  # Remove @ prefix
+                    try:
+                        with open(env_file, 'r') as f:
+                            for line in f:
+                                line = line.strip()
+                                if line and not line.startswith('#') and '=' in line:
+                                    key, value = line.split('=', 1)
+                                    env_dict[key.strip()] = value.strip()
+                    except IOError as e:
+                        display.error("Could not read environment file %s: %s" % (env_file, str(e)))
+                        continue
+                else:
+                    # Direct key=value format
+                    if '=' in env_item:
+                        key, value = env_item.split('=', 1)
+                        env_dict[key] = value
+                    else:
+                        display.warning("Skipping invalid environment variable format: %s" % env_item)
+
+            if env_dict:
+                mytask['environment'] = env_dict
 
         # process environment variables if provided
         if context.CLIARGS['environment']:
@@ -154,9 +176,9 @@ class AdHocCLI(CLI):
 
         # just listing hosts?
         if context.CLIARGS['listhosts']:
-            display.display('  hosts (%d):' % len(hosts))
+            display.display(' hosts (%d):' % len(hosts))
             for host in hosts:
-                display.display('    %s' % host)
+                display.display('%s' % host)
             return 0
 
         # verify we have arguments if we know we need em
