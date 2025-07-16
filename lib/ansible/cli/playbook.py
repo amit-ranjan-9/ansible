@@ -53,7 +53,7 @@ class PlaybookCLI(CLI):
         opt_help.add_vault_options(self.parser)
         opt_help.add_fork_options(self.parser)
         opt_help.add_module_options(self.parser)
-
+        opt_help.add_environment_options(self.parser) #added -E
         # ansible playbook specific opts
         self.parser.add_argument('--syntax-check', dest='syntax', action='store_true',
                                  help="perform a syntax check on the playbook, but do not execute it")
