@@ -500,6 +500,14 @@ def add_runtask_options(parser):
                         help="set additional variables as key=value or YAML/JSON, if filename prepend with @", default=[])
 
 
+def add_environment_options(parser):
+    """Add options for commands that can set environment variables"""
+    parser.add_argument('-E', '--environment', dest='environment', action='append', default=[],
+                        type=maybe_unfrack_path('@'),
+                        help="Set environment variables (format 'KEY=VALUE') for module execution. "
+                             "If filename prepend with @")
+
+
 def add_tasknoplay_options(parser):
     """Add options for commands that run a task w/o a defined play"""
     parser.add_argument('--task-timeout', type=int, dest="task_timeout", action="store", default=C.TASK_TIMEOUT,
@@ -524,11 +532,6 @@ def add_vault_options(parser):
     base_group.add_argument('--vault-password-file', '--vault-pass-file', default=[], dest='vault_password_files',
                             help="vault password file", type=unfrack_path(follow=False), action='append')
 
-def add_environment_options(parser):
-    """Add environment variable options to ArgumentParser"""
-    parser.add_argument('-E', '--environment', dest='environment',
-                        help="set environment variables as key=value or JSON/YAML, if filename prepend with @",
-                        action='append', type=maybe_unfrack_path('@'), default=[])
 
 def _tagged_type_factory(name: str, func: t.Callable[[str], object], /) -> t.Callable[[str], object]:
     """

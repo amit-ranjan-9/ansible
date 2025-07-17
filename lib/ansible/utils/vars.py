@@ -237,6 +237,34 @@ def load_options_vars(version):
     return load_options_vars.options_vars
 
 
+def load_env_vars(loader):
+    """Load environment variables from CLI args, similar to load_extra_vars"""
+    
+    if not getattr(load_env_vars, 'env_vars', None):
+        env_vars = {}
+        for env_vars_opt in context.CLIARGS.get('environment', tuple()):
+            env_vars_opt = to_text(env_vars_opt, errors='surrogate_or_strict')
+            if env_vars_opt is None or not env_vars_opt:
+                continue
+            if env_vars_opt.startswith(u"@"):
+                # Argument is a YAML file (JSON is a subset of YAML)
+                data = loader.load_from_file(env_vars_opt[1:], trusted_as_template=True)
+            elif env_vars_opt[0] in [u'/', u'.']:
+                raise AnsibleOptionsError("Please prepend environment vars filename '%s' with '@'" % env_vars_opt)
+            elif env_vars_opt[0] in [u'[', u'{']:
+                # Arguments as YAML
+                data = loader.load(env_vars_opt)
+            else:
+                # Arguments as Key-value
+                data = parse_kv(env_vars_opt)
+            if isinstance(data, MutableMapping):
+                env_vars = combine_vars(env_vars, data)
+            else:
+                raise AnsibleOptionsError("Invalid environment vars data supplied. '%s' could not be made into a dictionary" % env_vars_opt)
+        load_env_vars.env_vars = env_vars
+    return load_env_vars.env_vars
+
+
 def isidentifier(ident):
     """Determine if string is valid identifier.
 
