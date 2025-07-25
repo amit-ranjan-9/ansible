@@ -23,7 +23,7 @@ from ansible.plugins.loader import add_all_plugin_dirs
 from ansible.utils.collection_loader import AnsibleCollectionConfig
 from ansible.utils.collection_loader._collection_finder import _get_collection_name_from_path, _get_collection_playbook_path
 from ansible.utils.display import Display
-
+from ansible.utils.vars import load_env_vars
 
 display = Display()
 
@@ -53,7 +53,8 @@ class PlaybookCLI(CLI):
         opt_help.add_vault_options(self.parser)
         opt_help.add_fork_options(self.parser)
         opt_help.add_module_options(self.parser)
-        opt_help.add_environment_options(self.parser) #added -E
+        opt_help.add_environment_options(self.parser)
+
         # ansible playbook specific opts
         self.parser.add_argument('--syntax-check', dest='syntax', action='store_true',
                                  help="perform a syntax check on the playbook, but do not execute it")
@@ -136,6 +137,9 @@ class PlaybookCLI(CLI):
 
         # create base objects
         loader, inventory, variable_manager = self._play_prereqs()
+        env_vars = load_env_vars(loader)
+        if env_vars:
+            variable_manager.extra_vars.setdefault('ansible_env', {}).update(env_vars)
 
         # (which is not returned in list_hosts()) is taken into account for
         # warning if inventory is empty.  But it can't be taken into account for

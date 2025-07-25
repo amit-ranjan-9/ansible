@@ -31,7 +31,7 @@ from ansible.utils import plugin_docs
 from ansible.utils.color import stringc
 from ansible._internal._datatag._tags import TrustedAsTemplate
 from ansible.utils.display import Display
-
+from ansible.utils.vars import load_env_vars
 display = Display()
 
 
@@ -118,7 +118,8 @@ class ConsoleCLI(CLI, cmd.Cmd):
         opt_help.add_basedir_options(self.parser)
         opt_help.add_runtask_options(self.parser)
         opt_help.add_tasknoplay_options(self.parser)
-        opt_help.add_environment_options(self.parser) #added -E
+        opt_help.add_environment_options(self.parser)
+
         # options unique to shell
         self.parser.add_argument('pattern', help='host pattern', metavar='pattern', default='all', nargs='?')
         self.parser.add_argument('--step', dest='step', action='store_true',
@@ -208,6 +209,8 @@ class ConsoleCLI(CLI, cmd.Cmd):
                 diff=self.diff,
                 collections=self.collections,
             )
+            if self.cli_env_vars:
+                play_ds['environment'] = self.cli_env_vars
             play = Play().load(play_ds, variable_manager=self.variable_manager, loader=self.loader)
         except Exception as e:
             display.error(u"Unable to build command: %s" % to_text(e))
@@ -557,7 +560,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
         self.passwords = {'conn_pass': sshpass, 'become_pass': becomepass}
 
         self.loader, self.inventory, self.variable_manager = self._play_prereqs()
-
+        self.cli_env_vars = load_env_vars(self.loader)
         hosts = self.get_host_list(self.inventory, context.CLIARGS['subset'], self.pattern)
 
         self.groups = self.inventory.list_groups()
