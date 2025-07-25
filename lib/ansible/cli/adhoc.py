@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import json
-import os
 
 # ansible.cli needs to be imported first, to ensure the source bin/* scripts run that code first
 from ansible.cli import CLI

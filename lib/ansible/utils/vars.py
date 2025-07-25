@@ -239,7 +239,7 @@ def load_options_vars(version):
 
 def load_env_vars(loader):
     """Load environment variables from CLI args, similar to load_extra_vars"""
-    
+
     if not getattr(load_env_vars, 'env_vars', None):
         env_vars = {}
         for env_vars_opt in context.CLIARGS.get('environment', tuple()):
