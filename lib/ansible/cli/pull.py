@@ -28,7 +28,6 @@ from ansible.plugins.loader import module_loader
 from ansible.utils.cmd_functions import run_cmd
 from ansible.utils.display import Display
 
-
 display = Display()
 
 SAFE_OUTPUT_ENV = {
@@ -272,6 +271,8 @@ class PullCLI(CLI):
                                                               repo_opts, limit_opts)
         for ev in context.CLIARGS['extra_vars']:
             cmd += ' -e %s' % shlex.quote(ev)
+        for env_var in context.CLIARGS.get('environment', []):
+            cmd += ' -E %s' % shlex.quote(env_var)
 
         # Nap?
         if context.CLIARGS['sleep']:
@@ -319,6 +320,8 @@ class PullCLI(CLI):
 
         for ev in context.CLIARGS['extra_vars']:
             cmd += ' -e %s' % shlex.quote(ev)
+        for env_var in context.CLIARGS.get('environment', []):
+            cmd += ' -E %s' % shlex.quote(env_var)
 
         if context.CLIARGS['become_ask_pass']:
             cmd += ' --ask-become-pass'
