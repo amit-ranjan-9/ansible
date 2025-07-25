@@ -120,6 +120,7 @@ class PullCLI(CLI):
         opt_help.add_module_options(self.parser)
         opt_help.add_runas_prompt_options(self.parser)
         opt_help.add_environment_options(self.parser)
+
         self.parser.add_argument('args', help='Playbook(s)', metavar='playbook.yml', nargs='*')
 
         # options unique to pull
