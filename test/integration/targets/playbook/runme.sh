@@ -90,3 +90,21 @@ ansible-playbook -i ../../inventory vars_files_null.yml -v "$@"
 
 # test vars_files: filename.yml
 ansible-playbook -i ../../inventory vars_files_string.yml -v "$@"
+
+# Test environment variable support - CLI flag acceptance
+echo "Testing ansible-playbook environment variable CLI acceptance"
+
+# Test that -E flag is accepted without error
+ansible-playbook -i ../../inventory -E "TEST_VAR=test_value" types.yml -v "$@" > /dev/null
+
+# Test that -E flag with file is accepted without error
+echo "TEST_FILE_VAR: test_file_value" > test_env.yml
+ansible-playbook -i ../../inventory -E "@test_env.yml" types.yml -v "$@" > /dev/null
+
+# Test multiple -E flags are accepted
+ansible-playbook -i ../../inventory -E "VAR1=value1" -E "VAR2=value2" types.yml -v "$@" > /dev/null
+
+# Clean up
+rm -f test_env.yml
+
+echo "All ansible-playbook environment variable CLI tests passed"

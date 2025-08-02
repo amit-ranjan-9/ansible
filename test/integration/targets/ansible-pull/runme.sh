@@ -138,7 +138,36 @@ echo 'test run on changes, yaml result format'
 change_repo
 ANSIBLE_CALLBACK_RESULT_FORMAT='yaml' ansible-pull -d "${pull_dir}" -U "${repo_dir}" --only-if-changed "$@" | tee "${temp_log}"
 pass_tests
+# -E add
+# For Pull (add before the ORIG_CONFIG check):
 
+# Test that pull accepts -E flag without error
+echo 'Testing pull environment variable CLI acceptance'
+
+# Test basic -E flag acceptance
+set +e
+ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}_test_env" -U "${repo_dir}" -E "TEST_VAR=test_value" local.yml > /dev/null 2>&1
+exit_code=$?
+set -e
+
+if [ $exit_code -ne 0 ]; then
+    echo "FAILED: Pull command does not accept -E flag"
+    exit 1
+fi
+
+# Test -E with file flag acceptance
+echo "TEST_FILE_VAR: test_value" > "${temp_dir}/test_env.yml"
+set +e
+ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}_test_env2" -U "${repo_dir}" -E "@${temp_dir}/test_env.yml" local.yml > /dev/null 2>&1
+exit_code=$?
+set -e
+
+if [ $exit_code -ne 0 ]; then
+    echo "FAILED: Pull command does not accept -E @file flag"
+    exit 1
+fi
+
+echo "Pull environment variable CLI tests passed"
 if [ "${ORIG_CONFIG}" != "" ]; then
   export ANSIBLE_CONFIG="${ORIG_CONFIG}"
 fi
