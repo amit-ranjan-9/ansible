@@ -106,5 +106,4 @@ ansible-playbook -i ../../inventory -E "VAR1=value1" -E "VAR2=value2" types.yml 
 
 # Clean up
 rm -f test_env.yml
-
 echo "All ansible-playbook environment variable CLI tests passed"
