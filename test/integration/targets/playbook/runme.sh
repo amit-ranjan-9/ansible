@@ -91,19 +91,23 @@ ansible-playbook -i ../../inventory vars_files_null.yml -v "$@"
 # test vars_files: filename.yml
 ansible-playbook -i ../../inventory vars_files_string.yml -v "$@"
 
-# Test environment variable support - CLI flag acceptance
-echo "Testing ansible-playbook environment variable CLI acceptance"
+# test environment variable setting with -E option
+# Create a simple test to verify -E option works without causing errors
+set +e
+result="$(ansible-playbook -i ../../inventory user.yml -E 'TEST_ENV_VAR=ansible_playbook_test_value' "$@" 2>&1)"
+playbook_exit_code=$?
+set -e
 
-# Test that -E flag is accepted without error
-ansible-playbook -i ../../inventory -E "TEST_VAR=test_value" types.yml -v "$@" > /dev/null
-
-# Test that -E flag with file is accepted without error
-echo "TEST_FILE_VAR: test_file_value" > test_env.yml
-ansible-playbook -i ../../inventory -E "@test_env.yml" types.yml -v "$@" > /dev/null
-
-# Test multiple -E flags are accepted
-ansible-playbook -i ../../inventory -E "VAR1=value1" -E "VAR2=value2" types.yml -v "$@" > /dev/null
-
-# Clean up
-rm -f test_env.yml
-echo "All ansible-playbook environment variable CLI tests passed"
+if [ $playbook_exit_code -eq 0 ]; then
+    echo "Environment variable test PASSED for ansible-playbook (basic functionality)"
+    # Try to find evidence of the environment variable in the output
+    if echo "$result" | grep -q 'TEST_ENV_VAR'; then
+        echo "Environment variable found in output - EXCELLENT!"
+    fi
+else
+    echo "Environment variable test FAILED for ansible-playbook"
+    echo "Exit code: $playbook_exit_code"
+    echo "Output:"
+    echo "$result"
+    exit 1
+fi

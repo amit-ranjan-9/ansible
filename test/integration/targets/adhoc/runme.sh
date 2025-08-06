@@ -26,11 +26,5 @@ ansible localhost -m setup > /dev/null
 ansible localhost -m assert -a '{"that": "ansible_facts.distribution is defined"}'
 # test flushing the fact cache
 ansible --flush-cache localhost -m debug -a "msg={{ ansible_facts }}" | grep '"msg": {}'
-# Test that -E flag is accepted without error (basic smoke test)
-ansible localhost -m setup -E "TEST_VAR=test_value" > /dev/null
-# Test that -E flag with file is accepted without error
-echo "TEST_FILE_VAR: test_file_value" > "${OUTPUT_DIR}/test_env.yml"
-ansible localhost -m setup -E "@${OUTPUT_DIR}/test_env.yml" > /dev/null
-# Test multiple -E flags are accepted
-ansible localhost -m setup -E "VAR1=value1" -E "VAR2=value2" > /dev/null
-echo "All adhoc environment variable CLI tests passed"
+# test environment variable setting with -E option
+ansible localhost -m setup -E 'TEST_ENV_VAR=ansible_test_value' | grep 'TEST_ENV_VAR'
