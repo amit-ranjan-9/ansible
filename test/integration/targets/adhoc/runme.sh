@@ -27,4 +27,4 @@ ansible localhost -m assert -a '{"that": "ansible_facts.distribution is defined"
 # test flushing the fact cache
 ansible --flush-cache localhost -m debug -a "msg={{ ansible_facts }}" | grep '"msg": {}'
 # test environment variable setting with -E option
-ansible localhost -m setup -E 'TEST_ENV_VAR=ansible_test_value' | grep 'TEST_ENV_VAR'
+ansible localhost -m setup -a '{"gather_subset": "env"}' -E 'TEST_ENV_VAR=ansible_test_value' | grep '"TEST_ENV_VAR": "ansible_test_value"'

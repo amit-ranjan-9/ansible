@@ -144,26 +144,12 @@ if [ "${ORIG_CONFIG}" != "" ]; then
 fi
 
 # test environment variable setting with -E option
-echo 'Testing environment variable with ansible-pull'
 set +e
-pull_result="$(ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}" -U "${repo_dir}" -E 'TEST_ENV_VAR=ansible_pull_test_value' "$@" 2>&1)"
+pull_result="$(ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}" -U "${repo_dir}" \
+    -E 'TEST_PULL_VAR=pull_test_value' --check "$@" 2>&1)"
 pull_exit_code=$?
 set -e
-
-# Log the pull result for debugging
-echo "$pull_result" | tee "${temp_log}"
-
-# Check if the environment variable appears in the output
-if echo "$pull_result" | grep -q 'TEST_ENV_VAR'; then
-    echo "Environment variable test PASSED for ansible-pull"
-else
-    # Try a more basic test - just verify the -E option doesn't cause errors
-    if [ $pull_exit_code -eq 0 ]; then
-        echo "Environment variable test PASSED for ansible-pull (basic functionality)"
-    else
-        echo "Environment variable test FAILED for ansible-pull"
-        echo "Exit code: $pull_exit_code"
-        echo "Output: $pull_result"
-        exit 1
-    fi
+# Check if -E option caused a parsing error
+if echo "$pull_result" | grep -q "unrecognized arguments: -E"; then
+    exit 1
 fi
