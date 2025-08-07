@@ -92,22 +92,18 @@ ansible-playbook -i ../../inventory vars_files_null.yml -v "$@"
 ansible-playbook -i ../../inventory vars_files_string.yml -v "$@"
 
 # test environment variable setting with -E option
-# Create a simple test to verify -E option works without causing errors
-set +e
-result="$(ansible-playbook -i ../../inventory user.yml -E 'TEST_ENV_VAR=ansible_playbook_test_value' "$@" 2>&1)"
-playbook_exit_code=$?
-set -e
+cat > env_var_test.yml << 'EOF'
+---
+- hosts: localhost
+  gather_facts: yes
+  tasks:
+    - name: Verify environment variable is accessible  
+      assert:
+        that:
+          - ansible_env.TEST_PLAYBOOK_VAR is defined
+          - ansible_env.TEST_PLAYBOOK_VAR == "playbook_test_value"
+        fail_msg: "Environment variable TEST_PLAYBOOK_VAR not accessible via -E option"
+EOF
 
-if [ $playbook_exit_code -eq 0 ]; then
-    echo "Environment variable test PASSED for ansible-playbook (basic functionality)"
-    # Try to find evidence of the environment variable in the output
-    if echo "$result" | grep -q 'TEST_ENV_VAR'; then
-        echo "Environment variable found in output - EXCELLENT!"
-    fi
-else
-    echo "Environment variable test FAILED for ansible-playbook"
-    echo "Exit code: $playbook_exit_code"
-    echo "Output:"
-    echo "$result"
-    exit 1
-fi
+ansible-playbook -i ../../inventory env_var_test.yml -E 'TEST_PLAYBOOK_VAR=playbook_test_value' "$@"
+rm -f env_var_test.yml

@@ -9,4 +9,4 @@ unset ANSIBLE_HOST_PATTERN_MISMATCH
 
 echo debug var=inventory_hostname | ansible-console '{{"localhost"}}'
 # test environment variable setting with -E option
-echo 'setup' | ansible-console localhost -E 'TEST_ENV_VAR=ansible_console_test_value' | grep 'TEST_ENV_VAR'
+echo 'setup gather_subset=env' | ansible-console localhost -E 'TEST_CONSOLE_VAR=console_test_value' | grep '"TEST_CONSOLE_VAR": "console_test_value"'
