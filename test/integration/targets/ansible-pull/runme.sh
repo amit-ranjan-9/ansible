@@ -143,13 +143,41 @@ if [ "${ORIG_CONFIG}" != "" ]; then
   export ANSIBLE_CONFIG="${ORIG_CONFIG}"
 fi
 
-# test environment variable setting with -E option
+# test environment variable setting with -E option (basic KEY=VALUE)
 set +e
 pull_result="$(ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}" -U "${repo_dir}" \
     -E 'TEST_PULL_VAR=pull_test_value' --check "$@" 2>&1)"
 pull_exit_code=$?
 set -e
-# Check if -E option caused a parsing error
-if echo "$pull_result" | grep -q "unrecognized arguments: -E"; then
+
+# Check if -E option caused a parsing error (should NOT happen)
+if echo "$pull_result" | grep "unrecognized arguments: -E" > /dev/null 2>&1; then
+    echo "ERROR: -E option not recognized in ansible-pull"
+    exit 1
+fi
+
+# test environment variable setting with -E option (file format)
+cat > "${temp_dir}/pull_env_file.yml" << 'EOF'
+TEST_PULL_FILE_VAR: pull_file_value
+EOF
+
+set +e
+pull_result="$(ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}" -U "${repo_dir}" \
+    -E "@${temp_dir}/pull_env_file.yml" --check "$@" 2>&1)"
+set -e
+
+if echo "$pull_result" | grep "unrecognized arguments: -E" > /dev/null 2>&1; then
+    echo "ERROR: -E with file option not recognized in ansible-pull"
+    exit 1
+fi
+
+# test environment variable setting with -E option (JSON format)
+set +e
+pull_result="$(ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}" -U "${repo_dir}" \
+    -E '{"TEST_PULL_JSON": "pull_json_value"}' --check "$@" 2>&1)"
+set -e
+
+if echo "$pull_result" | grep "unrecognized arguments: -E" > /dev/null 2>&1; then
+    echo "ERROR: -E with JSON option not recognized in ansible-pull"
     exit 1
 fi

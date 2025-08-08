@@ -1,0 +1,10 @@
+---
+- hosts: localhost
+  gather_facts: yes
+  tasks:
+    - name: Verify environment variable is accessible via ansible_env
+      assert:
+        that:
+          - ansible_env.TEST_PLAYBOOK_VAR is defined
+          - ansible_env.TEST_PLAYBOOK_VAR == "playbook_test_value"
+        fail_msg: "Environment variable TEST_PLAYBOOK_VAR not accessible via -E option"

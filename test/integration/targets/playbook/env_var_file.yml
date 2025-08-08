@@ -1,0 +1,12 @@
+---
+- hosts: localhost
+  gather_facts: yes
+  tasks:
+    - name: Verify environment variables from file are accessible
+      assert:
+        that:
+          - ansible_env.TEST_FILE_VAR is defined
+          - ansible_env.TEST_FILE_VAR == "file_test_value"
+          - ansible_env.TEST_ANOTHER_FILE_VAR is defined
+          - ansible_env.TEST_ANOTHER_FILE_VAR == "another_file_value"
+        fail_msg: "Environment variables from file not accessible via -E @filename option"
