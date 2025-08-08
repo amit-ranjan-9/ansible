@@ -91,19 +91,11 @@ ansible-playbook -i ../../inventory vars_files_null.yml -v "$@"
 # test vars_files: filename.yml
 ansible-playbook -i ../../inventory vars_files_string.yml -v "$@"
 
-# test environment variable setting with -E option
-cat > env_var_test.yml << 'EOF'
----
-- hosts: localhost
-  gather_facts: yes
-  tasks:
-    - name: Verify environment variable is accessible  
-      assert:
-        that:
-          - ansible_env.TEST_PLAYBOOK_VAR is defined
-          - ansible_env.TEST_PLAYBOOK_VAR == "playbook_test_value"
-        fail_msg: "Environment variable TEST_PLAYBOOK_VAR not accessible via -E option"
-EOF
+# test environment variable setting with -E option (basic KEY=VALUE)
+ansible-playbook -i ../../inventory env_var_basic.yml -E 'TEST_PLAYBOOK_VAR=playbook_test_value' "$@"
 
-ansible-playbook -i ../../inventory env_var_test.yml -E 'TEST_PLAYBOOK_VAR=playbook_test_value' "$@"
-rm -f env_var_test.yml
+# test environment variable setting with -E option (file format)
+ansible-playbook -i ../../inventory env_var_file.yml -E '@playbook_env_vars.yml' "$@"
+
+# test environment variable setting with -E option (JSON format)
+ansible-playbook -i ../../inventory env_var_json.yml -E '{"TEST_JSON_VAR": "json_test_value"}' "$@"

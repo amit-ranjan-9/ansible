@@ -26,5 +26,13 @@ ansible localhost -m setup > /dev/null
 ansible localhost -m assert -a '{"that": "ansible_facts.distribution is defined"}'
 # test flushing the fact cache
 ansible --flush-cache localhost -m debug -a "msg={{ ansible_facts }}" | grep '"msg": {}'
-# test environment variable setting with -E option
+# test environment variable setting with -E option (basic KEY=VALUE)
 ansible localhost -m setup -a '{"gather_subset": "env"}' -E 'TEST_ENV_VAR=ansible_test_value' | grep '"TEST_ENV_VAR": "ansible_test_value"'
+# test environment variable setting with -E option (file format)
+cat > "${OUTPUT_DIR}/test_env_file.yml" << 'EOF'
+TEST_FILE_VAR: file_test_value
+TEST_ANOTHER_VAR: another_value
+EOF
+ansible localhost -m setup -a '{"gather_subset": "env"}' -E "@${OUTPUT_DIR}/test_env_file.yml" | grep '"TEST_FILE_VAR": "file_test_value"'
+# test environment variable setting with -E option (JSON format)
+ansible localhost -m setup -a '{"gather_subset": "env"}' -E '{"TEST_JSON_VAR": "json_test_value"}' | grep '"TEST_JSON_VAR": "json_test_value"'
