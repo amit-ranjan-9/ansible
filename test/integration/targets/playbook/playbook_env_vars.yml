@@ -1,2 +1,1 @@
-TEST_FILE_VAR: file_test_value
-TEST_ANOTHER_FILE_VAR: another_file_value
+TEST_FILE_VAR: shared_test_value
