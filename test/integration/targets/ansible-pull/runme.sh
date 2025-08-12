@@ -143,8 +143,14 @@ if [ "${ORIG_CONFIG}" != "" ]; then
   export ANSIBLE_CONFIG="${ORIG_CONFIG}"
 fi
 
-# test environment variable setting with -E option 
+# test environment variable setting with -E option (basic KEY=VALUE)
 ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}" -U "${repo_dir}" env_var_test.yml \
-    -E 'TEST_PULL_BASIC_VAR=pull_test_value' \
-    -E '@pull_env_vars.yml' \
-    -E '{"TEST_PULL_JSON_VAR": "pull_json_value"}' "$@"
+    -E 'TEST_PULL=pull_test_value' "$@"
+
+# test environment variable setting with -E option (file format)
+ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}" -U "${repo_dir}" env_var_test.yml \
+    -E '@pull_env_vars.yml' "$@"
+
+# test environment variable setting with -E option (JSON format)
+ANSIBLE_CONFIG='' ansible-pull -d "${pull_dir}" -U "${repo_dir}" env_var_test.yml \
+    -E '{"TEST_PULL": "pull_test_value"}' "$@"

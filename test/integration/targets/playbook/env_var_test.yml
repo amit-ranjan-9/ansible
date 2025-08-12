@@ -5,10 +5,6 @@
     - name: Verify all environment variables are accessible via ansible_env
       assert:
         that:
-          - ansible_env.TEST_SHARED_VAR is defined
-          - ansible_env.TEST_SHARED_VAR == "shared_test_value"
-          - ansible_env.TEST_FILE_VAR is defined  
-          - ansible_env.TEST_FILE_VAR == "shared_test_value"
-          - ansible_env.TEST_JSON_VAR is defined
-          - ansible_env.TEST_JSON_VAR == "shared_test_value"
+          - ansible_env.TEST_PLAYBOOK is defined
+          - ansible_env.TEST_PLAYBOOK == "playbook_test_value"
         fail_msg: "Environment variables not accessible via -E option"
