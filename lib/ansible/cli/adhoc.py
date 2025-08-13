@@ -64,10 +64,6 @@ class AdHocCLI(CLI):
         self.parser.add_argument('-m', '--module-name', dest='module_name',
                                  help="Name of the action to execute (default=%s)" % C.DEFAULT_MODULE_NAME,
                                  default=C.DEFAULT_MODULE_NAME)
-        self.parser.add_argument('-E', '--environment', dest='environment',
-                                 help="Set environment variables (format 'KEY=VALUE') for module execution. "
-                                      "Can be specified multiple times.",
-                                 action='append', default=[])
         self.parser.add_argument('args', metavar='pattern', help='host pattern')
 
     def post_process_args(self, options):
@@ -104,19 +100,6 @@ class AdHocCLI(CLI):
             mytask['environment'] = load_env_vars(self.loader)
 
         mytask = Origin(description=f'<adhoc {context.CLIARGS["module_name"]!r} task>').tag(mytask)
-
-        # process environment variables if provided
-        if context.CLIARGS['environment']:
-            env_dict = {}
-            for env_var in context.CLIARGS['environment']:
-                if '=' in env_var:
-                    key, value = env_var.split('=', 1)
-                    env_dict[key] = value
-                else:
-                    display.warning("Skipping invalid environment variable format: %s" % env_var)
-
-            if env_dict:
-                mytask['environment'] = env_dict
 
         # avoid adding to tasks that don't support it, unless set, then give user an error
         if context.CLIARGS['module_name'] not in C._ACTION_ALL_INCLUDE_ROLE_TASKS and any(frozenset((async_val, poll))):
