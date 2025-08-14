@@ -251,7 +251,6 @@ def load_env_vars(loader):
                 data = loader.load_from_file(env_vars_opt[1:], trusted_as_template=True)
             elif env_vars_opt[0] in [u'/', u'.']:
                 raise AnsibleOptionsError("Please prepend environment vars filename '%s' with '@'" % env_vars_opt)
-            #elif env_vars_opt[0] in [u'[', u'{']:
             elif env_vars_opt[0] in [u'[', u'{'] or (': ' in env_vars_opt and '=' not in env_vars_opt):
                 # Arguments as YAML (including multi-line YAML with key: value format)
                 data = loader.load(env_vars_opt)
