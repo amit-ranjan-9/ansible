@@ -183,7 +183,7 @@ import os
 import re
 import tempfile
 
-from ansible.module_utils.common.text.converters import to_text, to_bytes
+from ansible.module_utils.common.text.converters import to_text
 from ansible.module_utils.basic import AnsibleModule
 
 
