@@ -47,7 +47,6 @@ import typing as t
 
 import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleFileNotFound, AnsibleConnectionFailure
-from ansible.module_utils.six import text_type, binary_type
 from ansible.module_utils.common.text.converters import to_bytes, to_native, to_text
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.display import Display
@@ -100,10 +99,10 @@ class Connection(ConnectionBase):
         display.vvv(u"EXEC {0}".format(to_text(cmd)), host=self._play_context.remote_addr)
         display.debug("opening command with Popen()")
 
-        if isinstance(cmd, (text_type, binary_type)):
-            cmd = to_bytes(cmd)
+        if isinstance(cmd, (str, bytes)):
+            cmd = to_text(cmd)
         else:
-            cmd = map(to_bytes, cmd)
+            cmd = map(to_text, cmd)
 
         pty_primary = None
         stdin = subprocess.PIPE
@@ -114,12 +113,12 @@ class Connection(ConnectionBase):
             # privileges or the command otherwise needs a pty.
             try:
                 pty_primary, stdin = pty.openpty()
-            except (IOError, OSError) as e:
-                display.debug("Unable to open pty: %s" % to_native(e))
+            except OSError as ex:
+                display.debug(f"Unable to open pty: {ex}")
 
         p = subprocess.Popen(
             cmd,
-            shell=isinstance(cmd, (text_type, binary_type)),
+            shell=isinstance(cmd, (str, bytes)),
             executable=executable,
             cwd=self.cwd,
             stdin=stdin,
@@ -252,7 +251,7 @@ class Connection(ConnectionBase):
     def _become_success_timeout(self) -> int:
         """Timeout value for become success in seconds."""
         if (timeout := self.get_option('become_success_timeout')) < 1:
-            timeout = C.config.get_configuration_definitions('connection', 'local')['become_success_timeout']['default']
+            timeout = C.config.get_config_default('become_success_timeout', plugin_type='connection', plugin_name='local')
 
         return timeout
 
@@ -271,8 +270,8 @@ class Connection(ConnectionBase):
             shutil.copyfile(to_bytes(in_path, errors='surrogate_or_strict'), to_bytes(out_path, errors='surrogate_or_strict'))
         except shutil.Error:
             raise AnsibleError("failed to copy: {0} and {1} are the same".format(to_native(in_path), to_native(out_path)))
-        except IOError as e:
-            raise AnsibleError("failed to transfer file to {0}: {1}".format(to_native(out_path), to_native(e)))
+        except OSError as ex:
+            raise AnsibleError(f"Failed to transfer file to {out_path!r}.") from ex
 
     def fetch_file(self, in_path: str, out_path: str) -> None:
         """ fetch a file from local to local -- for compatibility """

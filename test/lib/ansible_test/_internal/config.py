@@ -20,6 +20,7 @@ from .util_common import (
 
 from .metadata import (
     Metadata,
+    DebuggerFlags,
 )
 
 from .data import (
@@ -36,8 +37,6 @@ from .host_configs import (
     PythonConfig,
     VirtualPythonConfig,
 )
-
-THostConfig = t.TypeVar('THostConfig', bound=HostConfig)
 
 
 class TerminateMode(enum.Enum):
@@ -118,6 +117,26 @@ class EnvironmentConfig(CommonConfig):
         self.dev_systemd_debug: bool = args.dev_systemd_debug
         self.dev_probe_cgroups: t.Optional[str] = args.dev_probe_cgroups
 
+        debugger_flags = DebuggerFlags(
+            on_demand=args.dev_debug_on_demand,
+            cli=args.dev_debug_cli,
+            ansiballz=args.dev_debug_ansiballz,
+            self=args.dev_debug_self,
+        )
+
+        self.metadata = Metadata.from_file(args.metadata) if args.metadata else Metadata(debugger_flags=debugger_flags)
+        self.metadata_path: t.Optional[str] = None
+
+        def metadata_callback(payload_config: PayloadConfig) -> None:
+            """Add the metadata file to the payload file list."""
+            config = self
+            files = payload_config.files
+
+            if config.metadata_path:
+                files.append((os.path.abspath(config.metadata_path), config.metadata_path))
+
+        data_context().register_payload_callback(metadata_callback)
+
         def host_callback(payload_config: PayloadConfig) -> None:
             """Add the host files to the payload file list."""
             config = self
@@ -145,7 +164,7 @@ class EnvironmentConfig(CommonConfig):
         """Host configuration for the targets."""
         return self.host_settings.targets
 
-    def only_target(self, target_type: t.Type[THostConfig]) -> THostConfig:
+    def only_target[THostConfig: HostConfig](self, target_type: t.Type[THostConfig]) -> THostConfig:
         """
         Return the host configuration for the target.
         Requires that there is exactly one target of the specified type.
@@ -162,7 +181,7 @@ class EnvironmentConfig(CommonConfig):
 
         return target
 
-    def only_targets(self, target_type: t.Type[THostConfig]) -> list[THostConfig]:
+    def only_targets[THostConfig: HostConfig](self, target_type: t.Type[THostConfig]) -> list[THostConfig]:
         """
         Return a list of target host configurations.
         Requires that there are one or more targets, all the specified type.
@@ -220,21 +239,8 @@ class TestConfig(EnvironmentConfig):
         self.junit: bool = getattr(args, 'junit', False)
         self.failure_ok: bool = getattr(args, 'failure_ok', False)
 
-        self.metadata = Metadata.from_file(args.metadata) if args.metadata else Metadata()
-        self.metadata_path: t.Optional[str] = None
-
         if self.coverage_check:
             self.coverage = True
-
-        def metadata_callback(payload_config: PayloadConfig) -> None:
-            """Add the metadata file to the payload file list."""
-            config = self
-            files = payload_config.files
-
-            if config.metadata_path:
-                files.append((os.path.abspath(config.metadata_path), config.metadata_path))
-
-        data_context().register_payload_callback(metadata_callback)
 
 
 class ShellConfig(EnvironmentConfig):
@@ -308,9 +314,6 @@ class IntegrationConfig(TestConfig):
             ansible_config_path = super().get_ansible_config()
 
         return ansible_config_path
-
-
-TIntegrationConfig = t.TypeVar('TIntegrationConfig', bound=IntegrationConfig)
 
 
 class PosixIntegrationConfig(IntegrationConfig):

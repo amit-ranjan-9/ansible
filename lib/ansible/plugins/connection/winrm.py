@@ -182,6 +182,7 @@ except ImportError:
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleConnectionFailure
 from ansible.errors import AnsibleFileNotFound
+from ansible.executor.powershell.module_manifest import _bootstrap_powershell_script
 from ansible.module_utils.json_utils import _filter_non_json_lines
 from ansible.module_utils.parsing.convert_bool import boolean
 from ansible.module_utils.common.text.converters import to_bytes, to_native, to_text
@@ -578,7 +579,7 @@ class Connection(ConnectionBase):
     def _winrm_exec(
         self,
         command: str,
-        args: t.Iterable[bytes] = (),
+        args: t.Iterable[bytes | str] = (),
         from_exec: bool = False,
         stdin_iterator: t.Iterable[tuple[bytes, bool]] = None,
     ) -> tuple[int, bytes, bytes]:
@@ -603,9 +604,7 @@ class Connection(ConnectionBase):
                     self._winrm_write_stdin(command_id, stdin_iterator)
 
             except Exception as ex:
-                display.warning("ERROR DURING WINRM SEND INPUT - attempting to recover: %s %s"
-                                % (type(ex).__name__, to_text(ex)))
-                display.debug(traceback.format_exc())
+                display.error_as_warning("ERROR DURING WINRM SEND INPUT. Attempting to recover.", ex)
                 stdin_push_failed = True
 
             # Even on a failure above we try at least once to get the output
@@ -722,7 +721,16 @@ class Connection(ConnectionBase):
 
     def exec_command(self, cmd: str, in_data: bytes | None = None, sudoable: bool = True) -> tuple[int, bytes, bytes]:
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
-        cmd_parts = self._shell._encode_script(cmd, as_list=True, strict_mode=False, preserve_rc=False)
+
+        encoded_prefix = self._shell._encode_script('', as_list=False, strict_mode=False, preserve_rc=False)
+        if cmd.startswith(encoded_prefix) or cmd.startswith("type "):
+            # Avoid double encoding the script, the first means we are already
+            # running the standard PowerShell command, the latter is used for
+            # the no pipeline case where it uses type to pipe the script into
+            # powershell which is known to work without re-encoding as pwsh.
+            cmd_parts = cmd.split(" ")
+        else:
+            cmd_parts = self._shell._encode_script(cmd, as_list=True, strict_mode=False, preserve_rc=False)
 
         # TODO: display something meaningful here
         display.vvv("EXEC (via pipeline wrapper)")
@@ -735,7 +743,15 @@ class Connection(ConnectionBase):
         return self._winrm_exec(cmd_parts[0], cmd_parts[1:], from_exec=True, stdin_iterator=stdin_iterator)
 
     # FUTURE: determine buffer size at runtime via remote winrm config?
-    def _put_file_stdin_iterator(self, in_path: str, out_path: str, buffer_size: int = 250000) -> t.Iterable[tuple[bytes, bool]]:
+    def _put_file_stdin_iterator(
+        self,
+        initial_stdin: bytes,
+        in_path: str,
+        out_path: str,
+        buffer_size: int = 250000,
+    ) -> t.Iterable[tuple[bytes, bool]]:
+        yield initial_stdin, False
+
         in_size = os.path.getsize(to_bytes(in_path, errors='surrogate_or_strict'))
         offset = 0
         with open(to_bytes(in_path, errors='surrogate_or_strict'), 'rb') as in_file:
@@ -757,40 +773,16 @@ class Connection(ConnectionBase):
         if not os.path.exists(to_bytes(in_path, errors='surrogate_or_strict')):
             raise AnsibleFileNotFound('file or module does not exist: "%s"' % to_native(in_path))
 
-        script_template = u"""
-            begin {{
-                $path = '{0}'
+        copy_script, copy_script_stdin = _bootstrap_powershell_script('winrm_put_file.ps1', {
+            'Path': out_path,
+        }, has_input=True)
+        cmd_parts = self._shell._encode_script(copy_script, as_list=True, strict_mode=False, preserve_rc=False)
 
-                $DebugPreference = "Continue"
-                $ErrorActionPreference = "Stop"
-                Set-StrictMode -Version 2
-
-                $fd = [System.IO.File]::Create($path)
-
-                $sha1 = [System.Security.Cryptography.SHA1CryptoServiceProvider]::Create()
-
-                $bytes = @() #initialize for empty file case
-            }}
-            process {{
-               $bytes = [System.Convert]::FromBase64String($input)
-               $sha1.TransformBlock($bytes, 0, $bytes.Length, $bytes, 0) | Out-Null
-               $fd.Write($bytes, 0, $bytes.Length)
-            }}
-            end {{
-                $sha1.TransformFinalBlock($bytes, 0, 0) | Out-Null
-
-                $hash = [System.BitConverter]::ToString($sha1.Hash).Replace("-", "").ToLowerInvariant()
-
-                $fd.Close()
-
-                Write-Output "{{""sha1"":""$hash""}}"
-            }}
-        """
-
-        script = script_template.format(self._shell._escape(out_path))
-        cmd_parts = self._shell._encode_script(script, as_list=True, strict_mode=False, preserve_rc=False)
-
-        status_code, b_stdout, b_stderr = self._winrm_exec(cmd_parts[0], cmd_parts[1:], stdin_iterator=self._put_file_stdin_iterator(in_path, out_path))
+        status_code, b_stdout, b_stderr = self._winrm_exec(
+            cmd_parts[0],
+            cmd_parts[1:],
+            stdin_iterator=self._put_file_stdin_iterator(copy_script_stdin, in_path, out_path),
+        )
         stdout = to_text(b_stdout)
         stderr = to_text(b_stderr)
 
@@ -824,41 +816,19 @@ class Connection(ConnectionBase):
             offset = 0
             while True:
                 try:
-                    script = """
-                        $path = '%(path)s'
-                        If (Test-Path -LiteralPath $path -PathType Leaf)
-                        {
-                            $buffer_size = %(buffer_size)d
-                            $offset = %(offset)d
-
-                            $stream = New-Object -TypeName IO.FileStream($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
-                            $stream.Seek($offset, [System.IO.SeekOrigin]::Begin) > $null
-                            $buffer = New-Object -TypeName byte[] $buffer_size
-                            $bytes_read = $stream.Read($buffer, 0, $buffer_size)
-                            if ($bytes_read -gt 0) {
-                                $bytes = $buffer[0..($bytes_read - 1)]
-                                [System.Convert]::ToBase64String($bytes)
-                            }
-                            $stream.Close() > $null
-                        }
-                        ElseIf (Test-Path -LiteralPath $path -PathType Container)
-                        {
-                            Write-Host "[DIR]";
-                        }
-                        Else
-                        {
-                            Write-Error "$path does not exist";
-                            Exit 1;
-                        }
-                    """ % dict(buffer_size=buffer_size, path=self._shell._escape(in_path), offset=offset)
+                    script, in_data = _bootstrap_powershell_script('winrm_fetch_file.ps1', {
+                        'Path': in_path,
+                        'BufferSize': buffer_size,
+                        'Offset': offset,
+                    })
                     display.vvvvv('WINRM FETCH "%s" to "%s" (offset=%d)' % (in_path, out_path, offset), host=self._winrm_host)
                     cmd_parts = self._shell._encode_script(script, as_list=True, preserve_rc=False)
-                    status_code, b_stdout, b_stderr = self._winrm_exec(cmd_parts[0], cmd_parts[1:])
+                    status_code, b_stdout, b_stderr = self._winrm_exec(cmd_parts[0], cmd_parts[1:], stdin_iterator=self._wrapper_payload_stream(in_data))
                     stdout = to_text(b_stdout)
                     stderr = to_text(b_stderr)
 
                     if status_code != 0:
-                        raise IOError(stderr)
+                        raise OSError(stderr)
                     if stdout.strip() == '[DIR]':
                         data = None
                     else:
